@@ -862,6 +862,10 @@ function App() {
   }
 
   const openCreateModal = () => {
+    if (!auth.token) {
+      openAuthModal()
+      return
+    }
     setModalProject(null)
     setProjectModalOpen(true)
   }
@@ -920,15 +924,17 @@ function App() {
                   </button>
                 </>
               ) : (
-                <button className="btn btn-ghost" onClick={openAuthModal}>
+                <button className="btn btn-primary" onClick={openAuthModal}>
                   <Icon name="settings" />
                   Se connecter
                 </button>
               )}
-              <button className="btn btn-primary" onClick={openCreateModal}>
-                <Icon name="plus" />
-                Nouveau projet
-              </button>
+              {auth.token && (
+                <button className="btn btn-primary" onClick={openCreateModal}>
+                  <Icon name="plus" />
+                  Nouveau projet
+                </button>
+              )}
             </div>
           </header>
 
@@ -937,10 +943,17 @@ function App() {
               <div className="empty-state">
                 <h2>Aucun projet pour le moment.</h2>
                 <p>Créez votre premier projet video et commencez le storyboard.</p>
-                <button className="btn btn-primary" onClick={openCreateModal}>
-                  <Icon name="plus" />
-                  Creer un projet
-                </button>
+                {auth.token ? (
+                  <button className="btn btn-primary" onClick={openCreateModal}>
+                    <Icon name="plus" />
+                    Creer un projet
+                  </button>
+                ) : (
+                  <button className="btn btn-primary" onClick={openAuthModal}>
+                    <Icon name="settings" />
+                    Se connecter pour creer
+                  </button>
+                )}
               </div>
             ) : (
               projects.map((project) => (
