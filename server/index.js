@@ -80,7 +80,7 @@ app.post('/api/images', async (req, res) => {
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(distPath))
-  app.get('*', (req, res) => {
+  app.get('/*', (req, res) => {
     if (req.path.startsWith('/api')) return res.status(404).end()
     res.sendFile(path.join(distPath, 'index.html'))
   })
