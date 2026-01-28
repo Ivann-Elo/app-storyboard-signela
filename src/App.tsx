@@ -922,6 +922,10 @@ function App() {
                     <Icon name="close" />
                     Deconnexion
                   </button>
+                  <button className="btn btn-primary" onClick={openCreateModal}>
+                    <Icon name="plus" />
+                    Nouveau projet
+                  </button>
                 </>
               ) : (
                 <button className="btn btn-primary" onClick={openAuthModal}>
@@ -929,60 +933,58 @@ function App() {
                   Se connecter
                 </button>
               )}
-              {auth.token && (
-                <button className="btn btn-primary" onClick={openCreateModal}>
-                  <Icon name="plus" />
-                  Nouveau projet
-                </button>
-              )}
             </div>
           </header>
 
-          <section className="project-grid">
-            {projects.length === 0 ? (
-              <div className="empty-state">
-                <h2>Aucun projet pour le moment.</h2>
-                <p>Créez votre premier projet video et commencez le storyboard.</p>
-                {auth.token ? (
+          {!auth.token ? (
+            <div className="empty-state auth-gate">
+              <h2>Connectez-vous pour acceder a vos projets.</h2>
+              <p>La synchronisation cloud est activee apres connexion.</p>
+              <button className="btn btn-primary" onClick={openAuthModal}>
+                <Icon name="settings" />
+                Se connecter
+              </button>
+            </div>
+          ) : (
+            <section className="project-grid">
+              {projects.length === 0 ? (
+                <div className="empty-state">
+                  <h2>Aucun projet pour le moment.</h2>
+                  <p>Créez votre premier projet video et commencez le storyboard.</p>
                   <button className="btn btn-primary" onClick={openCreateModal}>
                     <Icon name="plus" />
                     Creer un projet
                   </button>
-                ) : (
-                  <button className="btn btn-primary" onClick={openAuthModal}>
-                    <Icon name="settings" />
-                    Se connecter pour creer
-                  </button>
-                )}
-              </div>
-            ) : (
-              projects.map((project) => (
-                <article className="project-card" key={project.id}>
-                  <div className="project-card__top">
-                    <h3>{project.name}</h3>
-                    <div className="project-card__meta">
-                      <span className="pill">Format {formatLabel(project.projectFrameFormat)}</span>
-                      <span className="pill">{project.scenes.length} scenes</span>
+                </div>
+              ) : (
+                projects.map((project) => (
+                  <article className="project-card" key={project.id}>
+                    <div className="project-card__top">
+                      <h3>{project.name}</h3>
+                      <div className="project-card__meta">
+                        <span className="pill">Format {formatLabel(project.projectFrameFormat)}</span>
+                        <span className="pill">{project.scenes.length} scenes</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="project-card__actions">
-                    <button className="btn btn-ghost" onClick={() => handleOpenProject(project.id)}>
-                      Ouvrir
-                    </button>
-                    <button className="btn btn-ghost" onClick={() => openEditModal(project)}>
-                      Renommer
-                    </button>
-                    <button className="btn btn-ghost" onClick={() => handleDuplicateProject(project.id)}>
-                      Dupliquer
-                    </button>
-                    <button className="btn btn-danger" onClick={() => handleDeleteProject(project.id)}>
-                      Supprimer
-                    </button>
-                  </div>
-                </article>
-              ))
-            )}
-          </section>
+                    <div className="project-card__actions">
+                      <button className="btn btn-ghost" onClick={() => handleOpenProject(project.id)}>
+                        Ouvrir
+                      </button>
+                      <button className="btn btn-ghost" onClick={() => openEditModal(project)}>
+                        Renommer
+                      </button>
+                      <button className="btn btn-ghost" onClick={() => handleDuplicateProject(project.id)}>
+                        Dupliquer
+                      </button>
+                      <button className="btn btn-danger" onClick={() => handleDeleteProject(project.id)}>
+                        Supprimer
+                      </button>
+                    </div>
+                  </article>
+                ))
+              )}
+            </section>
+          )}
         </div>
 
         {isProjectModalOpen && (

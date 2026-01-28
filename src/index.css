@@ -904,6 +904,10 @@ textarea {
   text-align: center;
 }
 
+.auth-gate {
+  margin-top: 24px;
+}
+
 .modal {
   position: fixed;
   inset: 0;
