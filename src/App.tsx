@@ -29,6 +29,10 @@ import Icon from './components/Icon'
 const STORAGE_KEY = 'signela.projects.v1'
 const ACTIVE_KEY = 'signela.activeProjectId.v1'
 const TOKEN_KEY = 'signela.auth.token.v1'
+const storageKeyForUser = (userId: string | null | undefined) =>
+  userId ? `${STORAGE_KEY}:${userId}` : null
+const activeKeyForUser = (userId: string | null | undefined) =>
+  userId ? `${ACTIVE_KEY}:${userId}` : null
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
 
@@ -129,9 +133,11 @@ const normalizeProjects = (projects: Project[]): Project[] =>
     })),
   }))
 
-const loadProjects = (): Project[] => {
+const loadProjects = (userId: string | null | undefined): Project[] => {
   if (typeof window === 'undefined') return []
-  const stored = localStorage.getItem(STORAGE_KEY)
+  const storageKey = storageKeyForUser(userId)
+  if (!storageKey) return []
+  const stored = localStorage.getItem(storageKey)
   if (!stored) return []
   try {
     const parsed = JSON.parse(stored)
@@ -141,9 +147,11 @@ const loadProjects = (): Project[] => {
   }
 }
 
-const loadActiveProjectId = () => {
+const loadActiveProjectId = (userId: string | null | undefined) => {
   if (typeof window === 'undefined') return null
-  const stored = localStorage.getItem(ACTIVE_KEY)
+  const activeKey = activeKeyForUser(userId)
+  if (!activeKey) return null
+  const stored = localStorage.getItem(activeKey)
   return stored || null
 }
 
@@ -210,18 +218,19 @@ const sceneMatchesFilters = (scene: Scene, search: string, filters: FilterState)
 }
 
 function App() {
-  const [projects, setProjects] = useState<Project[]>(() => loadProjects())
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
-    loadActiveProjectId()
+  const initialToken = loadToken()
+  const initialUser = decodeToken(initialToken)
+  const [projects, setProjects] = useState<Project[]>(() =>
+    loadProjects(initialUser?.id)
   )
-  const [auth, setAuth] = useState<AuthState>(() => {
-    const token = loadToken()
-    return {
-      token,
-      user: decodeToken(token),
-      status: 'idle',
-    }
-  })
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
+    loadActiveProjectId(initialUser?.id)
+  )
+  const [auth, setAuth] = useState<AuthState>(() => ({
+    token: initialToken,
+    user: initialUser,
+    status: 'idle',
+  }))
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const [cardSize, setCardSize] = useState<CardSize>('medium')
   const [search, setSearch] = useState('')
@@ -282,14 +291,17 @@ function App() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
+    const storageKey = storageKeyForUser(auth.user?.id)
+    const activeKey = activeKeyForUser(auth.user?.id)
+    if (!storageKey || !activeKey) return
+    localStorage.setItem(storageKey, JSON.stringify(projects))
     if (activeProjectId) {
-      localStorage.setItem(ACTIVE_KEY, activeProjectId)
+      localStorage.setItem(activeKey, activeProjectId)
     } else {
-      localStorage.removeItem(ACTIVE_KEY)
+      localStorage.removeItem(activeKey)
     }
     setLastSavedAt(new Date())
-  }, [projects, activeProjectId])
+  }, [projects, activeProjectId, auth.user?.id])
 
   useEffect(() => {
     saveToken(auth.token)
@@ -297,6 +309,8 @@ function App() {
 
   useEffect(() => {
     if (!auth.token) {
+      setProjects([])
+      setActiveProjectId(null)
       setAuth((current) => ({ ...current, status: 'ready' }))
       hasLoadedRemoteRef.current = false
       return
@@ -310,17 +324,22 @@ function App() {
           ...current,
           user: current.user ?? decodeToken(current.token),
         }))
+        const userId = decodeToken(auth.token)?.id
         if (data.length === 0) {
-          const local = loadProjects()
+          const local = loadProjects(userId)
           if (local.length > 0) {
             setProjects(local)
-            setActiveProjectId(local[0].id)
           } else {
             setProjects([])
           }
         } else {
           setProjects(data)
-          setActiveProjectId(data[0].id)
+        }
+        const storedActive = loadActiveProjectId(userId)
+        if (storedActive && data.find((project) => project.id === storedActive)) {
+          setActiveProjectId(storedActive)
+        } else {
+          setActiveProjectId(null)
         }
         hasLoadedRemoteRef.current = true
         setAuth((current) => ({ ...current, status: 'ready' }))
@@ -722,11 +741,15 @@ function App() {
 
   const handleAuthSuccess = (token: string, user: AuthUser) => {
     setAuth({ token, user, status: 'ready' })
+    setProjects([])
+    setActiveProjectId(null)
     setAuthModalOpen(false)
   }
 
   const handleLogout = () => {
     setAuth({ token: null, user: null, status: 'ready' })
+    setProjects([])
+    setActiveProjectId(null)
   }
 
   const openEditModal = (project: Project) => {

@@ -10,7 +10,7 @@ import pg from 'pg'
 const app = express()
 const port = Number(process.env.PORT) || 8787
 
-app.use(express.json({ limit: '4mb' }))
+app.use(express.json({ limit: '12mb' }))
 
 const apiKey = process.env.OPENAI_API_KEY
 const client = apiKey ? new OpenAI({ apiKey }) : null
@@ -77,7 +77,7 @@ const ensureDatabase = async () => {
       location text,
       moment text,
       characters text,
-      references text,
+      scene_references text,
       status text not null,
       created_at timestamptz not null,
       updated_at timestamptz not null
@@ -245,7 +245,7 @@ app.get('/api/projects', requireAuth, async (req, res) => {
         location: scene.location || '',
         moment: scene.moment || '',
         characters: scene.characters || '',
-        references: scene.references || '',
+        references: scene.scene_references || '',
         status: scene.status,
       })),
     }))
@@ -326,7 +326,7 @@ app.post('/api/projects/:id/sync', requireAuth, async (req, res) => {
     )
     await clientDb.query('delete from scenes where project_id = $1', [projectId])
     const insertScene =
-      'insert into scenes (id, project_id, order_index, title, duration, focal, description, notes, audio_types, use_project_format, scene_frame_format, image_prompt, image, location, moment, characters, references, status, created_at, updated_at) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)'
+      'insert into scenes (id, project_id, order_index, title, duration, focal, description, notes, audio_types, use_project_format, scene_frame_format, image_prompt, image, location, moment, characters, scene_references, status, created_at, updated_at) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)'
     for (const scene of project.scenes || []) {
       await clientDb.query(insertScene, [
         scene.id,
