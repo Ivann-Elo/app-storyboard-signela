@@ -133,6 +133,20 @@ const normalizeProjects = (projects: Project[]): Project[] =>
     })),
   }))
 
+const serializeProjectsForStorage = (projects: Project[]): Project[] =>
+  projects.map((project) => ({
+    ...project,
+    scenes: project.scenes.map((scene) => ({
+      ...scene,
+      image: scene.image
+        ? {
+            source: scene.image.source,
+            prompt: scene.image.prompt,
+          }
+        : null,
+    })),
+  }))
+
 const loadProjects = (userId: string | null | undefined): Project[] => {
   if (typeof window === 'undefined') return []
   const storageKey = storageKeyForUser(userId)
@@ -294,11 +308,15 @@ function App() {
     const storageKey = storageKeyForUser(auth.user?.id)
     const activeKey = activeKeyForUser(auth.user?.id)
     if (!storageKey || !activeKey) return
-    localStorage.setItem(storageKey, JSON.stringify(projects))
-    if (activeProjectId) {
-      localStorage.setItem(activeKey, activeProjectId)
-    } else {
-      localStorage.removeItem(activeKey)
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(serializeProjectsForStorage(projects)))
+      if (activeProjectId) {
+        localStorage.setItem(activeKey, activeProjectId)
+      } else {
+        localStorage.removeItem(activeKey)
+      }
+    } catch {
+      // Ignore quota errors; images are stored in backend when logged in.
     }
     setLastSavedAt(new Date())
   }, [projects, activeProjectId, auth.user?.id])
