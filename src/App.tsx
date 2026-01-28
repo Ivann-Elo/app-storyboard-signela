@@ -30,6 +30,17 @@ type SceneModalState = {
   isNew: boolean
 }
 
+type AuthUser = {
+  id: string
+  email: string
+}
+
+type AuthState = {
+  token: string | null
+  user: AuthUser | null
+  status: 'idle' | 'loading' | 'ready'
+}
+
 interface FrameFormat {
   width: number
   height: number
@@ -75,6 +86,8 @@ interface Project {
 
 const STORAGE_KEY = 'signela.projects.v1'
 const ACTIVE_KEY = 'signela.activeProjectId.v1'
+const TOKEN_KEY = 'signela.auth.token.v1'
+const API_BASE = import.meta.env.VITE_API_BASE || ''
 
 const PRESET_FORMATS: FrameFormat[] = [
   { width: 16, height: 9, label: '16:9', source: 'preset' },
@@ -308,6 +321,54 @@ const loadActiveProjectId = () => {
   return stored || null
 }
 
+const loadToken = () => {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+const saveToken = (token: string | null) => {
+  if (typeof window === 'undefined') return
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token)
+  } else {
+    localStorage.removeItem(TOKEN_KEY)
+  }
+}
+
+const decodeToken = (token: string | null): AuthUser | null => {
+  if (!token) return null
+  const parts = token.split('.')
+  if (parts.length !== 3) return null
+  try {
+    const payload = JSON.parse(atob(parts[1]))
+    if (!payload?.sub || !payload?.email) return null
+    return { id: payload.sub, email: payload.email }
+  } catch {
+    return null
+  }
+}
+
+const apiRequest = async <T,>(
+  path: string,
+  options: RequestInit = {},
+  token: string | null = null
+): Promise<T> => {
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  })
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    const message = payload?.error || 'Erreur serveur.'
+    throw new Error(message)
+  }
+  return (await response.json()) as T
+}
+
 const sceneMatchesFilters = (scene: Scene, search: string, filters: FilterState) => {
   const term = search.trim().toLowerCase()
   const matchesSearch =
@@ -327,6 +388,14 @@ function App() {
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
     loadActiveProjectId()
   )
+  const [auth, setAuth] = useState<AuthState>(() => {
+    const token = loadToken()
+    return {
+      token,
+      user: decodeToken(token),
+      status: 'idle',
+    }
+  })
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const [cardSize, setCardSize] = useState<CardSize>('medium')
   const [search, setSearch] = useState('')
@@ -345,6 +414,10 @@ function App() {
   const [isPointerDragging, setIsPointerDragging] = useState(false)
   const [sceneModal, setSceneModal] = useState<SceneModalState | null>(null)
   const [draftScene, setDraftScene] = useState<Scene | null>(null)
+  const [isAuthModalOpen, setAuthModalOpen] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle')
+  const syncTimerRef = useRef<number | null>(null)
+  const hasLoadedRemoteRef = useRef(false)
   const canvasRef = useRef<HTMLDivElement | null>(null)
   const dragOverIdRef = useRef<string | null>(null)
   const pointerDragRef = useRef<{
@@ -393,11 +466,84 @@ function App() {
   }, [projects, activeProjectId])
 
   useEffect(() => {
+    saveToken(auth.token)
+  }, [auth.token])
+
+  useEffect(() => {
+    if (!auth.token) {
+      setAuth((current) => ({ ...current, status: 'ready' }))
+      hasLoadedRemoteRef.current = false
+      return
+    }
+    let mounted = true
+    setAuth((current) => ({ ...current, status: 'loading' }))
+    apiRequest<Project[]>('/api/projects', {}, auth.token)
+      .then((data) => {
+        if (!mounted) return
+        setAuth((current) => ({
+          ...current,
+          user: current.user ?? decodeToken(current.token),
+        }))
+        if (data.length === 0) {
+          const local = loadProjects()
+          if (local.length > 0) {
+            setProjects(local)
+            setActiveProjectId(local[0].id)
+          } else {
+            setProjects([])
+          }
+        } else {
+          setProjects(data)
+          setActiveProjectId(data[0].id)
+        }
+        hasLoadedRemoteRef.current = true
+        setAuth((current) => ({ ...current, status: 'ready' }))
+      })
+      .catch(() => {
+        if (!mounted) return
+        setAuth((current) => ({ ...current, status: 'ready' }))
+      })
+    return () => {
+      mounted = false
+    }
+  }, [auth.token])
+
+  useEffect(() => {
     if (!activeProjectId) return
     if (!projects.find((project) => project.id === activeProjectId)) {
       setActiveProjectId(null)
     }
   }, [projects, activeProjectId])
+
+  useEffect(() => {
+    if (!auth.token || !hasLoadedRemoteRef.current) return
+    if (syncTimerRef.current) {
+      window.clearTimeout(syncTimerRef.current)
+    }
+    setSyncStatus('syncing')
+    syncTimerRef.current = window.setTimeout(() => {
+      Promise.all(
+        projects.map((project) =>
+          apiRequest(
+            `/api/projects/${project.id}/sync`,
+            { method: 'POST', body: JSON.stringify(project) },
+            auth.token
+          )
+        )
+      )
+        .then(() => {
+          setSyncStatus('idle')
+        })
+        .catch(() => {
+          setSyncStatus('error')
+        })
+    }, 800)
+    return () => {
+      if (syncTimerRef.current) {
+        window.clearTimeout(syncTimerRef.current)
+      }
+    }
+  }, [projects, auth.token])
 
   useEffect(() => {
     if (!activeProjectId) {
@@ -495,6 +641,11 @@ function App() {
     setProjects((prev) => prev.filter((project) => project.id !== projectId))
     if (activeProjectId === projectId) {
       setActiveProjectId(null)
+    }
+    if (auth.token) {
+      apiRequest(`/api/projects/${projectId}`, { method: 'DELETE' }, auth.token).catch(
+        () => {}
+      )
     }
   }
 
@@ -715,6 +866,23 @@ function App() {
     setProjectModalOpen(true)
   }
 
+  const openAuthModal = () => {
+    setAuthModalOpen(true)
+  }
+
+  const closeAuthModal = () => {
+    setAuthModalOpen(false)
+  }
+
+  const handleAuthSuccess = (token: string, user: AuthUser) => {
+    setAuth({ token, user, status: 'ready' })
+    setAuthModalOpen(false)
+  }
+
+  const handleLogout = () => {
+    setAuth({ token: null, user: null, status: 'ready' })
+  }
+
   const openEditModal = (project: Project) => {
     setModalProject(project)
     setProjectModalOpen(true)
@@ -743,6 +911,20 @@ function App() {
               <p className="subtitle">Storyboard pro pour equipes creatives.</p>
             </div>
             <div className="header-actions">
+              {auth.user ? (
+                <>
+                  <span className="pill">Connecte: {auth.user.email}</span>
+                  <button className="btn btn-ghost" onClick={handleLogout}>
+                    <Icon name="close" />
+                    Deconnexion
+                  </button>
+                </>
+              ) : (
+                <button className="btn btn-ghost" onClick={openAuthModal}>
+                  <Icon name="settings" />
+                  Se connecter
+                </button>
+              )}
               <button className="btn btn-primary" onClick={openCreateModal}>
                 <Icon name="plus" />
                 Nouveau projet
@@ -795,6 +977,14 @@ function App() {
             project={modalProject}
             onClose={closeProjectModal}
             onSubmit={handleProjectModalSubmit}
+          />
+        )}
+
+        {isAuthModalOpen && (
+          <AuthModal
+            onClose={closeAuthModal}
+            onSuccess={handleAuthSuccess}
+            initialEmail={auth.user?.email || ''}
           />
         )}
       </div>
@@ -883,6 +1073,21 @@ function App() {
               Parametres projet
             </button>
             <span className="muted">{formattedSavedAt}</span>
+            {auth.token && (
+              <span className="muted">
+                {syncStatus === 'syncing'
+                  ? 'Sync...'
+                  : syncStatus === 'error'
+                    ? 'Sync echouee'
+                    : 'Sync OK'}
+              </span>
+            )}
+            {!auth.token && (
+              <button className="btn btn-ghost" onClick={openAuthModal}>
+                <Icon name="settings" />
+                Se connecter
+              </button>
+            )}
           </div>
         </header>
 
@@ -1042,6 +1247,14 @@ function App() {
           project={modalProject}
           onClose={closeProjectModal}
           onSubmit={handleProjectModalSubmit}
+        />
+      )}
+
+      {isAuthModalOpen && (
+        <AuthModal
+          onClose={closeAuthModal}
+          onSuccess={handleAuthSuccess}
+          initialEmail={auth.user?.email || ''}
         />
       )}
 
@@ -1843,6 +2056,89 @@ function ProjectModal({
           >
             <Icon name="sparkles" />
             {project ? 'Mettre a jour' : 'Creer le projet'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AuthModal({
+  onClose,
+  onSuccess,
+  initialEmail,
+}: {
+  onClose: () => void
+  onSuccess: (token: string, user: AuthUser) => void
+  initialEmail: string
+}) {
+  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [email, setEmail] = useState(initialEmail)
+  const [password, setPassword] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleOverlayClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      onClose()
+    }
+  }
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const payload = await apiRequest<{ token: string; user: AuthUser }>(
+        mode === 'login' ? '/api/auth/login' : '/api/auth/register',
+        {
+          method: 'POST',
+          body: JSON.stringify({ email, password }),
+        }
+      )
+      onSuccess(payload.token, payload.user)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erreur de connexion.'
+      setError(message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="modal" onClick={handleOverlayClick}>
+      <div className="modal-content auth-modal" role="dialog" aria-modal="true">
+        <div className="modal-header">
+          <div>
+            <p className="modal-eyebrow">Synchronisation</p>
+            <h2>{mode === 'login' ? 'Connexion' : 'Creer un compte'}</h2>
+          </div>
+          <button className="btn btn-ghost" onClick={onClose}>
+            <Icon name="close" />
+            Fermer
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="field">
+            <label>Email</label>
+            <input value={email} onChange={(event) => setEmail(event.target.value)} />
+          </div>
+          <div className="field">
+            <label>Mot de passe</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
+          {error ? <p className="image-error">{error}</p> : null}
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-ghost" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
+            {mode === 'login' ? 'Creer un compte' : 'J ai deja un compte'}
+          </button>
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={isSubmitting}>
+            <Icon name="sparkles" />
+            {isSubmitting ? 'Connexion...' : mode === 'login' ? 'Se connecter' : 'Creer'}
           </button>
         </div>
       </div>

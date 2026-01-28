@@ -361,7 +361,7 @@ textarea {
 
 .editor-header {
   display: grid;
-  grid-template-columns: 190px minmax(0, 1fr) auto;
+  grid-template-columns: 170px minmax(0, 1fr) auto;
   gap: 24px;
   padding: 24px;
   border-radius: var(--radius);
@@ -409,6 +409,32 @@ textarea {
   gap: 12px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+@media (max-width: 1366px) {
+  .editor-header {
+    grid-template-columns: 1fr;
+  }
+
+  .header-actions {
+    justify-content: flex-start;
+  }
+
+  .project-title {
+    font-size: 24px;
+  }
+
+  .meta-row {
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .meta-row .pill {
+    flex: 0 0 auto;
+  }
 }
 
 .toolbar {
@@ -903,6 +929,10 @@ textarea {
   width: min(980px, 92vw);
   max-height: 88vh;
   overflow: auto;
+}
+
+.auth-modal {
+  width: min(520px, 92vw);
 }
 
 .modal-eyebrow {

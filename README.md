@@ -65,6 +65,18 @@ Cette app peut etre deployee sur Render en un seul service (front + API) avec HT
 
 Une fois deploye, le front et l'API seront disponibles sur la meme URL HTTPS.
 
+### Base de donnees (Render Postgres)
+
+Pour synchroniser les projets entre appareils, il faut une base Postgres Render.
+
+1) Render > New > PostgreSQL.
+2) Copie la variable `DATABASE_URL`.
+3) Dans le Web Service, ajoute ces variables:
+   - `DATABASE_URL` = la valeur Render
+   - `JWT_SECRET` = une chaine longue aleatoire
+   - `OPENAI_API_KEY` = ta cle
+   - `NODE_ENV` = `production`
+
 You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
 ```js
