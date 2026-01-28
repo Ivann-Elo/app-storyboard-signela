@@ -9,6 +9,8 @@ import type {
   GridMode,
   Project,
   Scene,
+  SceneImage,
+  SceneImageSource,
   SceneModalState,
   ViewMode,
 } from './types'
@@ -129,11 +131,18 @@ const normalizeProjects = (projects: Project[]): Project[] =>
     scenes: (project.scenes || []).map((scene) => ({
       ...scene,
       imagePrompt: scene.imagePrompt ?? 'nanobanana',
-      image: scene.image ?? null,
+      image:
+        scene.image && typeof scene.image === 'object' && 'url' in scene.image
+          ? (scene.image as SceneImage)
+          : null,
     })),
   }))
 
-const serializeProjectsForStorage = (projects: Project[]): Project[] =>
+type StoredSceneImage = { source: SceneImageSource; prompt?: string } | null
+type StoredScene = Omit<Scene, 'image'> & { image: StoredSceneImage }
+type StoredProject = Omit<Project, 'scenes'> & { scenes: StoredScene[] }
+
+const serializeProjectsForStorage = (projects: Project[]): StoredProject[] =>
   projects.map((project) => ({
     ...project,
     scenes: project.scenes.map((scene) => ({
