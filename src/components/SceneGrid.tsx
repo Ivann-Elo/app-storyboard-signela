@@ -23,7 +23,7 @@ const SceneGrid = ({
   selectedSceneId: string | null
   draggingId: string | null
   dragOverId: string | null
-  onOpen: (sceneId: string) => void
+  onOpen: (scene: Scene) => void
   onDragStart: (sceneId: string) => (event: DragEvent<HTMLElement>) => void
   onDragOver: (sceneId: string) => (event: DragEvent<HTMLElement>) => void
   onDrop: (sceneId: string) => (event: DragEvent<HTMLElement>) => void
@@ -54,7 +54,7 @@ const SceneGrid = ({
             data-scene-id={scene.id}
             style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
             draggable
-            onClick={() => onOpen(scene.id)}
+            onClick={() => onOpen(scene)}
             onDragStart={onDragStart(scene.id)}
             onDragOver={onDragOver(scene.id)}
             onDrop={onDrop(scene.id)}

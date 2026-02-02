@@ -752,9 +752,10 @@ function App() {
     updateDraftScene({ image: { url, source: 'generated', prompt }, imagePrompt: prompt })
   }
 
-  const openSceneView = (sceneId: string) => {
-    setSceneModal({ mode: 'view', sceneId, isNew: false })
-    setSelectedSceneId(sceneId)
+  const openSceneView = (scene: Scene) => {
+    setDraftScene(cloneScene(scene))
+    setSceneModal({ mode: 'view', sceneId: scene.id, isNew: false })
+    setSelectedSceneId(scene.id)
   }
 
   const openSceneEdit = (scene: Scene) => {
@@ -1255,7 +1256,9 @@ function App() {
               ? draftScene ||
                 activeProject.scenes.find((scene) => scene.id === sceneModal.sceneId) ||
                 null
-              : activeProject.scenes.find((scene) => scene.id === sceneModal.sceneId) || null
+              : activeProject.scenes.find((scene) => scene.id === sceneModal.sceneId) ||
+                draftScene ||
+                null
           }
           project={activeProject}
           onClose={closeSceneModal}

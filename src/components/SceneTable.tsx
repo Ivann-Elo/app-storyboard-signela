@@ -23,7 +23,7 @@ const SceneTable = ({
   project: Project
   selectedSceneId: string | null
   selectedSceneIds: string[]
-  onOpenScene: (sceneId: string) => void
+  onOpenScene: (scene: Scene) => void
   onToggleSelect: (sceneId: string) => void
   onToggleSelectAll: () => void
   onDragStart: (sceneId: string) => (event: DragEvent<HTMLElement>) => void
@@ -79,7 +79,7 @@ const SceneTable = ({
                   }${dragOverId === scene.id ? ' is-over' : ''} status-${scene.status}`}
                   data-scene-id={scene.id}
                   draggable
-                  onClick={() => onOpenScene(scene.id)}
+                  onClick={() => onOpenScene(scene)}
                   onDragStart={onDragStart(scene.id)}
                   onDragOver={onDragOver(scene.id)}
                   onDrop={onDrop(scene.id)}
