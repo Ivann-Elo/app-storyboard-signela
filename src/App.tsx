@@ -757,13 +757,11 @@ function App() {
     setSelectedSceneId(sceneId)
   }
 
-  const openSceneEdit = (sceneId: string) => {
+  const openSceneEdit = (scene: Scene) => {
     if (!activeProject) return
-    const scene = activeProject.scenes.find((item) => item.id === sceneId)
-    if (!scene) return
     setDraftScene(cloneScene(scene))
-    setSceneModal({ mode: 'edit', sceneId, isNew: false })
-    setSelectedSceneId(sceneId)
+    setSceneModal({ mode: 'edit', sceneId: scene.id, isNew: false })
+    setSelectedSceneId(scene.id)
   }
 
   const openSceneCreate = () => {

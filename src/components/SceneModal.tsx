@@ -20,7 +20,7 @@ const SceneModal: FC<{
   scene: Scene | null
   project: Project
   onClose: () => void
-  onEdit: (sceneId: string) => void
+  onEdit: (scene: Scene) => void
   onSave: () => void
   onUpdate: (updates: Partial<Scene>) => void
   onImageUpload: (event: ChangeEvent<HTMLInputElement>) => void
@@ -88,7 +88,7 @@ const SceneModal: FC<{
   const handleEdit = () => {
     if (isEditPending) return
     setIsEditPending(true)
-    onEdit(scene.id)
+    onEdit(scene)
     if (editLockRef.current) {
       window.clearTimeout(editLockRef.current)
     }
