@@ -23,6 +23,7 @@ import {
   AUDIO_OPTIONS,
   CARD_SIZE_OPTIONS,
   FOCAL_OPTIONS,
+  PRESET_FORMATS,
   STATUS_OPTIONS,
 } from './types'
 import { formatDuration, formatLabel, nowIso, readFileAsDataUrl, requestGeneratedImage } from './utils'
@@ -76,26 +77,26 @@ const makeScene = (project: Project, order: number): Scene => ({
   status: 'to-shoot',
 })
 
-const duplicateScene = (scene: Scene, order: number): Scene => ({
+const cloneScene = (scene: Scene, fallbackFormat?: FrameFormat): Scene => ({
   ...scene,
-  id: crypto.randomUUID(),
-  order,
-  title: `${scene.title} (copie)`,
-  sceneFrameFormat: { ...scene.sceneFrameFormat },
-  audioTypes: [...scene.audioTypes],
+  audioTypes: Array.isArray(scene.audioTypes) ? [...scene.audioTypes] : [],
+  sceneFrameFormat: {
+    ...(scene.sceneFrameFormat ?? fallbackFormat ?? PRESET_FORMATS[0]),
+  },
   imagePrompt: scene.imagePrompt ?? '',
-  image: scene.image ? { ...scene.image } : null,
+  image:
+    scene.image && typeof scene.image === 'object' && 'url' in scene.image
+      ? { ...scene.image }
+      : null,
   cameraMovement: scene.cameraMovement ?? 'fixed',
   status: normalizeSceneStatus(scene.status),
 })
 
-const cloneScene = (scene: Scene): Scene => ({
-  ...scene,
-  audioTypes: [...scene.audioTypes],
-  sceneFrameFormat: { ...scene.sceneFrameFormat },
-  image: scene.image ? { ...scene.image } : null,
-  cameraMovement: scene.cameraMovement ?? 'fixed',
-  status: normalizeSceneStatus(scene.status),
+const duplicateScene = (scene: Scene, order: number): Scene => ({
+  ...cloneScene(scene),
+  id: crypto.randomUUID(),
+  order,
+  title: `${scene.title} (copie)`,
 })
 
 const duplicateProject = (project: Project): Project => ({
@@ -108,15 +109,9 @@ const duplicateProject = (project: Project): Project => ({
     .slice()
     .sort((a, b) => a.order - b.order)
     .map((scene, index) => ({
-      ...scene,
+      ...cloneScene(scene, project.projectFrameFormat),
       id: crypto.randomUUID(),
       order: index + 1,
-      sceneFrameFormat: { ...scene.sceneFrameFormat },
-      audioTypes: [...scene.audioTypes],
-      imagePrompt: scene.imagePrompt ?? '',
-      image: scene.image ? { ...scene.image } : null,
-      cameraMovement: scene.cameraMovement ?? 'fixed',
-      status: normalizeSceneStatus(scene.status),
     })),
 })
 
@@ -144,6 +139,9 @@ const normalizeProjects = (projects: Project[]): Project[] =>
     ...project,
     scenes: (project.scenes || []).map((scene) => ({
       ...scene,
+      audioTypes: Array.isArray(scene.audioTypes) ? scene.audioTypes : [],
+      useProjectFormat: scene.useProjectFormat ?? true,
+      sceneFrameFormat: scene.sceneFrameFormat ?? project.projectFrameFormat,
       imagePrompt: scene.imagePrompt ?? '',
       image:
         scene.image && typeof scene.image === 'object' && 'url' in scene.image
@@ -732,7 +730,9 @@ function App() {
       if (current) return { ...current, ...updates }
       if (!activeProject || !sceneModal?.sceneId) return current
       const base = activeProject.scenes.find((scene) => scene.id === sceneModal.sceneId)
-      return base ? { ...cloneScene(base), ...updates } : current
+      return base
+        ? { ...cloneScene(base, activeProject.projectFrameFormat), ...updates }
+        : current
     })
   }
 
@@ -753,14 +753,14 @@ function App() {
   }
 
   const openSceneView = (scene: Scene) => {
-    setDraftScene(cloneScene(scene))
+    setDraftScene(cloneScene(scene, activeProject?.projectFrameFormat))
     setSceneModal({ mode: 'view', sceneId: scene.id, isNew: false })
     setSelectedSceneId(scene.id)
   }
 
   const openSceneEdit = (scene: Scene) => {
     if (!activeProject) return
-    setDraftScene(cloneScene(scene))
+    setDraftScene(cloneScene(scene, activeProject.projectFrameFormat))
     setSceneModal({ mode: 'edit', sceneId: scene.id, isNew: false })
     setSelectedSceneId(scene.id)
   }
