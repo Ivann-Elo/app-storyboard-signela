@@ -46,6 +46,24 @@ const API_BASE = import.meta.env.VITE_API_BASE || ''
 const normalizeSceneStatus = (status?: string | null): Scene['status'] =>
   status === 'shot' ? 'shot' : 'to-shoot'
 
+const warnSceneIssues = (scene: Partial<Scene>, projectId: string) => {
+  if (!import.meta.env.DEV) return
+  const issues: string[] = []
+  if (!scene.sceneFrameFormat) issues.push('sceneFrameFormat manquant')
+  if (!Array.isArray(scene.audioTypes)) issues.push('audioTypes invalide')
+  if (!scene.status) issues.push('status manquant')
+  if (scene.image && typeof scene.image === 'object' && !('url' in scene.image)) {
+    issues.push('image invalide')
+  }
+  if (issues.length > 0) {
+    console.warn('[signela] Scene normalisee avec champs manquants', {
+      projectId,
+      sceneId: scene.id ?? 'inconnu',
+      issues,
+    })
+  }
+}
+
 const makeProject = (name: string, format: FrameFormat, gridMode: GridMode): Project => ({
   id: crypto.randomUUID(),
   name: name.trim() || 'Nouveau projet',
@@ -137,19 +155,22 @@ const moveSceneToEnd = (scenes: Scene[], fromId: string) => {
 const normalizeProjects = (projects: Project[]): Project[] =>
   projects.map((project) => ({
     ...project,
-    scenes: (project.scenes || []).map((scene) => ({
-      ...scene,
-      audioTypes: Array.isArray(scene.audioTypes) ? scene.audioTypes : [],
-      useProjectFormat: scene.useProjectFormat ?? true,
-      sceneFrameFormat: scene.sceneFrameFormat ?? project.projectFrameFormat,
-      imagePrompt: scene.imagePrompt ?? '',
-      image:
-        scene.image && typeof scene.image === 'object' && 'url' in scene.image
-          ? (scene.image as SceneImage)
-          : null,
-      cameraMovement: scene.cameraMovement ?? 'fixed',
-      status: normalizeSceneStatus(scene.status),
-    })),
+    scenes: (project.scenes || []).map((scene) => {
+      warnSceneIssues(scene, project.id)
+      return {
+        ...scene,
+        audioTypes: Array.isArray(scene.audioTypes) ? scene.audioTypes : [],
+        useProjectFormat: scene.useProjectFormat ?? true,
+        sceneFrameFormat: scene.sceneFrameFormat ?? project.projectFrameFormat,
+        imagePrompt: scene.imagePrompt ?? '',
+        image:
+          scene.image && typeof scene.image === 'object' && 'url' in scene.image
+            ? (scene.image as SceneImage)
+            : null,
+        cameraMovement: scene.cameraMovement ?? 'fixed',
+        status: normalizeSceneStatus(scene.status),
+      }
+    }),
   }))
 
 type StoredSceneImage = { source: SceneImageSource; prompt?: string } | null
