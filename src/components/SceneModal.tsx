@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, FC, MouseEvent as ReactMouseEvent } from 'react'
 import type { Project, Scene, SceneModalMode } from '../types'
 import {
   AUDIO_OPTIONS,
+  CAMERA_MOVEMENT_OPTIONS,
   FOCAL_OPTIONS,
   LOCATION_OPTIONS,
   MOMENT_OPTIONS,
@@ -19,7 +20,7 @@ const SceneModal: FC<{
   scene: Scene | null
   project: Project
   onClose: () => void
-  onEdit: () => void
+  onEdit: (sceneId: string) => void
   onSave: () => void
   onUpdate: (updates: Partial<Scene>) => void
   onImageUpload: (event: ChangeEvent<HTMLInputElement>) => void
@@ -38,17 +39,37 @@ const SceneModal: FC<{
 }) => {
   const [isGenerating, setIsGenerating] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
+  const [isEditPending, setIsEditPending] = useState(false)
+  const editLockRef = useRef<number | null>(null)
 
   if (!scene) return null
 
   const formatInUse = scene.useProjectFormat ? project.projectFrameFormat : scene.sceneFrameFormat
-  const promptValue = scene.imagePrompt || 'nanobanana'
+  const promptValue = scene.imagePrompt ?? ''
 
   const handleOverlayClick = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) {
       onClose()
     }
   }
+
+  useEffect(() => {
+    if (mode === 'edit') {
+      setIsEditPending(false)
+      if (editLockRef.current) {
+        window.clearTimeout(editLockRef.current)
+        editLockRef.current = null
+      }
+    }
+  }, [mode])
+
+  useEffect(() => {
+    return () => {
+      if (editLockRef.current) {
+        window.clearTimeout(editLockRef.current)
+      }
+    }
+  }, [])
 
   const handleGenerateImage = async () => {
     const prompt = promptValue.trim() || 'nanobanana'
@@ -62,6 +83,19 @@ const SceneModal: FC<{
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  const handleEdit = () => {
+    if (isEditPending) return
+    setIsEditPending(true)
+    onEdit(scene.id)
+    if (editLockRef.current) {
+      window.clearTimeout(editLockRef.current)
+    }
+    editLockRef.current = window.setTimeout(() => {
+      setIsEditPending(false)
+      editLockRef.current = null
+    }, 700)
   }
 
   return (
@@ -124,10 +158,7 @@ const SceneModal: FC<{
                       <img src={scene.image.url} alt={scene.title} />
                     </div>
                   ) : (
-                    <div
-                      className="scene-image-empty"
-                      style={{ aspectRatio: `${formatInUse.width} / ${formatInUse.height}` }}
-                    >
+                    <div className="scene-image-empty">
                       <span className="muted">Aucune image</span>
                     </div>
                   )}
@@ -164,6 +195,14 @@ const SceneModal: FC<{
                       <strong>
                         {MOMENT_OPTIONS.find((option) => option.value === scene.moment)?.label ||
                           'Aucun'}
+                      </strong>
+                    </div>
+                    <div className="definition-item">
+                      <span>Mouvement de camera</span>
+                      <strong>
+                        {CAMERA_MOVEMENT_OPTIONS.find(
+                          (option) => option.value === scene.cameraMovement
+                        )?.label || 'Fixe'}
                       </strong>
                     </div>
                     <div className="definition-item">
@@ -213,10 +252,7 @@ const SceneModal: FC<{
                         <img src={scene.image.url} alt={scene.title} />
                       </div>
                     ) : (
-                      <div
-                        className="scene-image-empty"
-                        style={{ aspectRatio: `${formatInUse.width} / ${formatInUse.height}` }}
-                      >
+                      <div className="scene-image-empty">
                         <span>Aucune image associee</span>
                       </div>
                     )}
@@ -251,8 +287,8 @@ const SceneModal: FC<{
                   </div>
                   <div className="image-generator">
                     <input
-                      placeholder="nanobanana"
-                      value={scene.imagePrompt}
+                      placeholder="Saisi ton prompt."
+                      value={scene.imagePrompt ?? ''}
                       onChange={(event) => onUpdate({ imagePrompt: event.target.value })}
                     />
                     <button
@@ -262,7 +298,7 @@ const SceneModal: FC<{
                       disabled={isGenerating}
                     >
                       <Icon name="sparkles" />
-                      {isGenerating ? 'Generation...' : 'Generer (nanobanana)'}
+                      {isGenerating ? 'Generation...' : 'Generer'}
                     </button>
                   </div>
                   {imageError ? <p className="image-error">{imageError}</p> : null}
@@ -314,6 +350,21 @@ const SceneModal: FC<{
                     onChange={(event) => onUpdate({ focal: event.target.value as Scene['focal'] })}
                   >
                     {FOCAL_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Mouvement de camera</label>
+                  <select
+                    value={scene.cameraMovement}
+                    onChange={(event) =>
+                      onUpdate({ cameraMovement: event.target.value as Scene['cameraMovement'] })
+                    }
+                  >
+                    {CAMERA_MOVEMENT_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -400,9 +451,9 @@ const SceneModal: FC<{
 
         <div className="modal-actions">
           {mode === 'view' ? (
-            <button className="btn btn-primary" onClick={onEdit}>
-              <Icon name="settings" />
-              Modifier la scene
+            <button className="btn btn-primary" onClick={handleEdit} disabled={isEditPending}>
+              {isEditPending ? <span className="spinner" aria-hidden="true" /> : <Icon name="settings" />}
+              {isEditPending ? 'Ouverture...' : 'Modifier la scene'}
             </button>
           ) : (
             <>

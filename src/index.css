@@ -214,6 +214,16 @@ textarea {
   background: linear-gradient(120deg, #b87aff, #7b41e0);
 }
 
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--ink);
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
 .btn-ghost {
   background: transparent;
   border-color: transparent;
@@ -604,6 +614,12 @@ textarea {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+.scene-image-empty {
+  height: 140px;
+  min-height: 120px;
+  max-height: 160px;
+}
+
 .scene-image-preview {
   border-style: solid;
   background: rgba(15, 15, 20, 0.8);
@@ -637,7 +653,8 @@ textarea {
 }
 
 .image-generator input {
-  min-width: 200px;
+  flex: 1 1 360px;
+  min-width: 280px;
 }
 
 .image-upload input {
@@ -929,6 +946,10 @@ textarea {
   padding: 24px;
 }
 
+.confirm-modal {
+  width: min(480px, 92vw);
+}
+
 .scene-modal {
   width: min(980px, 92vw);
   max-height: 88vh;
@@ -1154,5 +1175,11 @@ textarea {
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }

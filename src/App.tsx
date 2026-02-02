@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, DragEvent, PointerEvent as ReactPointerEvent } from 'react'
+import type {
+  ChangeEvent,
+  DragEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from 'react'
 import type {
   AuthState,
   AuthUser,
@@ -37,6 +42,8 @@ const activeKeyForUser = (userId: string | null | undefined) =>
   userId ? `${ACTIVE_KEY}:${userId}` : null
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
+const normalizeSceneStatus = (status?: string | null): Scene['status'] =>
+  status === 'shot' ? 'shot' : 'to-shoot'
 
 const makeProject = (name: string, format: FrameFormat, gridMode: GridMode): Project => ({
   id: crypto.randomUUID(),
@@ -59,13 +66,14 @@ const makeScene = (project: Project, order: number): Scene => ({
   audioTypes: [],
   useProjectFormat: true,
   sceneFrameFormat: { ...project.projectFrameFormat },
-  imagePrompt: 'nanobanana',
+  imagePrompt: '',
   image: null,
+  cameraMovement: 'fixed',
   location: '',
   moment: '',
   characters: '',
   references: '',
-  status: 'draft',
+  status: 'to-shoot',
 })
 
 const duplicateScene = (scene: Scene, order: number): Scene => ({
@@ -75,8 +83,10 @@ const duplicateScene = (scene: Scene, order: number): Scene => ({
   title: `${scene.title} (copie)`,
   sceneFrameFormat: { ...scene.sceneFrameFormat },
   audioTypes: [...scene.audioTypes],
-  imagePrompt: scene.imagePrompt,
+  imagePrompt: scene.imagePrompt ?? '',
   image: scene.image ? { ...scene.image } : null,
+  cameraMovement: scene.cameraMovement ?? 'fixed',
+  status: normalizeSceneStatus(scene.status),
 })
 
 const cloneScene = (scene: Scene): Scene => ({
@@ -84,6 +94,8 @@ const cloneScene = (scene: Scene): Scene => ({
   audioTypes: [...scene.audioTypes],
   sceneFrameFormat: { ...scene.sceneFrameFormat },
   image: scene.image ? { ...scene.image } : null,
+  cameraMovement: scene.cameraMovement ?? 'fixed',
+  status: normalizeSceneStatus(scene.status),
 })
 
 const duplicateProject = (project: Project): Project => ({
@@ -101,8 +113,10 @@ const duplicateProject = (project: Project): Project => ({
       order: index + 1,
       sceneFrameFormat: { ...scene.sceneFrameFormat },
       audioTypes: [...scene.audioTypes],
-      imagePrompt: scene.imagePrompt ?? 'nanobanana',
+      imagePrompt: scene.imagePrompt ?? '',
       image: scene.image ? { ...scene.image } : null,
+      cameraMovement: scene.cameraMovement ?? 'fixed',
+      status: normalizeSceneStatus(scene.status),
     })),
 })
 
@@ -130,11 +144,13 @@ const normalizeProjects = (projects: Project[]): Project[] =>
     ...project,
     scenes: (project.scenes || []).map((scene) => ({
       ...scene,
-      imagePrompt: scene.imagePrompt ?? 'nanobanana',
+      imagePrompt: scene.imagePrompt ?? '',
       image:
         scene.image && typeof scene.image === 'object' && 'url' in scene.image
           ? (scene.image as SceneImage)
           : null,
+      cameraMovement: scene.cameraMovement ?? 'fixed',
+      status: normalizeSceneStatus(scene.status),
     })),
   }))
 
@@ -268,6 +284,7 @@ function App() {
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [modalProject, setModalProject] = useState<Project | null>(null)
   const [isProjectModalOpen, setProjectModalOpen] = useState(false)
+  const [pendingDeleteProject, setPendingDeleteProject] = useState<Project | null>(null)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [isPointerDragging, setIsPointerDragging] = useState(false)
   const [sceneModal, setSceneModal] = useState<SceneModalState | null>(null)
@@ -360,7 +377,7 @@ function App() {
             setProjects([])
           }
         } else {
-          setProjects(data)
+          setProjects(normalizeProjects(data))
         }
         const storedActive = loadActiveProjectId(userId)
         if (storedActive && data.find((project) => project.id === storedActive)) {
@@ -428,6 +445,18 @@ function App() {
       setSelectedSceneId(null)
     }
   }, [orderedScenes, selectedSceneId])
+
+  useEffect(() => {
+    if (!pendingDeleteProject) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setPendingDeleteProject(null)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [pendingDeleteProject])
 
   useEffect(() => {
     dragOverIdRef.current = dragOverId
@@ -518,6 +547,26 @@ function App() {
       apiRequest(`/api/projects/${projectId}`, { method: 'DELETE' }, auth.token).catch(
         () => {}
       )
+    }
+  }
+
+  const openDeleteProjectConfirm = (project: Project) => {
+    setPendingDeleteProject(project)
+  }
+
+  const closeDeleteProjectConfirm = () => {
+    setPendingDeleteProject(null)
+  }
+
+  const confirmDeleteProject = () => {
+    if (!pendingDeleteProject) return
+    handleDeleteProject(pendingDeleteProject.id)
+    setPendingDeleteProject(null)
+  }
+
+  const handleDeleteOverlayClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      closeDeleteProjectConfirm()
     }
   }
 
@@ -797,6 +846,33 @@ function App() {
     setProjectModalOpen(false)
   }
 
+  const deleteConfirmModal = pendingDeleteProject ? (
+    <div className="modal" onClick={handleDeleteOverlayClick}>
+      <div className="modal-content confirm-modal" role="dialog" aria-modal="true">
+        <div className="modal-header">
+          <h2>Supprimer ce projet ?</h2>
+          <button className="btn btn-ghost" onClick={closeDeleteProjectConfirm}>
+            <Icon name="close" />
+            Fermer
+          </button>
+        </div>
+        <div className="modal-body">
+          <p>Supprimer ce projet ? Cette action est irréversible.</p>
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-ghost" onClick={closeDeleteProjectConfirm} autoFocus>
+            <Icon name="close" />
+            Annuler
+          </button>
+          <button className="btn btn-danger" onClick={confirmDeleteProject}>
+            <Icon name="trash" />
+            Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null
+
   if (!activeProject) {
     return (
       <div className="app-root">
@@ -868,7 +944,10 @@ function App() {
                       <button className="btn btn-ghost" onClick={() => handleDuplicateProject(project.id)}>
                         Dupliquer
                       </button>
-                      <button className="btn btn-danger" onClick={() => handleDeleteProject(project.id)}>
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => openDeleteProjectConfirm(project)}
+                      >
                         Supprimer
                       </button>
                     </div>
@@ -895,6 +974,8 @@ function App() {
             apiRequest={apiRequest}
           />
         )}
+
+        {deleteConfirmModal}
       </div>
     )
   }
@@ -1180,13 +1261,15 @@ function App() {
           }
           project={activeProject}
           onClose={closeSceneModal}
-          onEdit={() => sceneModal.sceneId && openSceneEdit(sceneModal.sceneId)}
+          onEdit={openSceneEdit}
           onSave={saveSceneModal}
           onUpdate={updateDraftScene}
           onImageUpload={handleSceneImageUpload}
           onGenerateImage={handleGenerateSceneImage}
         />
       )}
+
+      {deleteConfirmModal}
     </div>
   )
 }

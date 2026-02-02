@@ -1,6 +1,6 @@
 import type { DragEvent, PointerEvent as ReactPointerEvent } from 'react'
 import type { CardSize, Project, Scene } from '../types'
-import { AUDIO_OPTIONS, FOCAL_OPTIONS, STATUS_OPTIONS } from '../types'
+import { AUDIO_OPTIONS, CAMERA_MOVEMENT_OPTIONS, FOCAL_OPTIONS, STATUS_OPTIONS } from '../types'
 import { formatLabel, formatDuration } from '../utils'
 
 const SceneGrid = ({
@@ -41,6 +41,10 @@ const SceneGrid = ({
         const format = scene.useProjectFormat ? project.projectFrameFormat : scene.sceneFrameFormat
         const frameFormat = project.gridMode === 'adaptive' ? format : project.projectFrameFormat
         const ratio = `${frameFormat.width} / ${frameFormat.height}`
+        const statusLabel = STATUS_OPTIONS.find((option) => option.value === scene.status)?.label
+        const cameraLabel =
+          CAMERA_MOVEMENT_OPTIONS.find((option) => option.value === scene.cameraMovement)?.label ||
+          'Fixe'
         return (
           <article
             key={scene.id}
@@ -87,9 +91,8 @@ const SceneGrid = ({
               <h3>{scene.title}</h3>
               <div className="scene-card__info">
                 <span>{formatDuration(scene.duration)}</span>
-                  <span>
-                    {STATUS_OPTIONS.find((option) => option.value === scene.status)?.label}
-                  </span>
+                {statusLabel ? <span>{statusLabel}</span> : null}
+                <span>Cam: {cameraLabel}</span>
               </div>
               <div className="scene-card__tags">
                 {scene.image ? (

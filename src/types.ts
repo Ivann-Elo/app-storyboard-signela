@@ -3,12 +3,13 @@ export type CardSize = 'small' | 'medium' | 'large'
 export type GridMode = 'stable' | 'adaptive'
 export type AudioType = 'live' | 'voice' | 'music'
 export type FocalType = 'large' | 'medium' | 'tight'
-export type SceneStatus = 'draft' | 'approved' | 'shot'
+export type SceneStatus = 'to-shoot' | 'shot'
 export type LocationType = 'interior' | 'exterior'
 export type MomentType = 'day' | 'night'
 export type FormatSource = 'preset' | 'custom'
 export type SceneImageSource = 'upload' | 'generated'
 export type SceneModalMode = 'view' | 'edit'
+export type CameraMovement = 'fixed' | 'travelling' | 'zoom'
 
 export type FilterState = {
   focal: 'all' | FocalType
@@ -42,6 +43,7 @@ export interface Scene {
   sceneFrameFormat: FrameFormat
   imagePrompt: string
   image: SceneImage | null
+  cameraMovement: CameraMovement
   location: LocationType | ''
   moment: MomentType | ''
   characters: string
@@ -96,9 +98,14 @@ export const AUDIO_OPTIONS: Array<{ value: AudioType; label: string }> = [
 ]
 
 export const STATUS_OPTIONS: Array<{ value: SceneStatus; label: string }> = [
-  { value: 'draft', label: 'A ecrire' },
-  { value: 'approved', label: 'Valide' },
-  { value: 'shot', label: 'Tourne' },
+  { value: 'to-shoot', label: 'À tourner' },
+  { value: 'shot', label: 'Tourné' },
+]
+
+export const CAMERA_MOVEMENT_OPTIONS: Array<{ value: CameraMovement; label: string }> = [
+  { value: 'fixed', label: 'Fixe' },
+  { value: 'travelling', label: 'Travelling' },
+  { value: 'zoom', label: 'Zoom' },
 ]
 
 export const LOCATION_OPTIONS: Array<{ value: LocationType | ''; label: string }> = [

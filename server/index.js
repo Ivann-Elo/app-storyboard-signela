@@ -78,11 +78,15 @@ const ensureDatabase = async () => {
       moment text,
       characters text,
       scene_references text,
+      camera_movement text not null default 'fixed',
       status text not null,
       created_at timestamptz not null,
       updated_at timestamptz not null
     );
   `)
+  await pool.query(
+    "alter table scenes add column if not exists camera_movement text not null default 'fixed';"
+  )
 }
 
 ensureDatabase().catch((error) => {
@@ -246,6 +250,7 @@ app.get('/api/projects', requireAuth, async (req, res) => {
         moment: scene.moment || '',
         characters: scene.characters || '',
         references: scene.scene_references || '',
+        cameraMovement: scene.camera_movement || 'fixed',
         status: scene.status,
       })),
     }))
@@ -326,7 +331,7 @@ app.post('/api/projects/:id/sync', requireAuth, async (req, res) => {
     )
     await clientDb.query('delete from scenes where project_id = $1', [projectId])
     const insertScene =
-      'insert into scenes (id, project_id, order_index, title, duration, focal, description, notes, audio_types, use_project_format, scene_frame_format, image_prompt, image, location, moment, characters, scene_references, status, created_at, updated_at) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)'
+      'insert into scenes (id, project_id, order_index, title, duration, focal, description, notes, audio_types, use_project_format, scene_frame_format, image_prompt, image, location, moment, characters, scene_references, camera_movement, status, created_at, updated_at) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)'
     for (const scene of project.scenes || []) {
       await clientDb.query(insertScene, [
         scene.id,
@@ -346,7 +351,8 @@ app.post('/api/projects/:id/sync', requireAuth, async (req, res) => {
         scene.moment || '',
         scene.characters || '',
         scene.references || '',
-        scene.status || 'draft',
+        scene.cameraMovement || 'fixed',
+        scene.status || 'to-shoot',
         project.createdAt,
         project.updatedAt,
       ])

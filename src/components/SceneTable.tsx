@@ -1,6 +1,6 @@
 import type { DragEvent, PointerEvent as ReactPointerEvent } from 'react'
 import type { Project, Scene } from '../types'
-import { AUDIO_OPTIONS, FOCAL_OPTIONS, STATUS_OPTIONS } from '../types'
+import { AUDIO_OPTIONS, CAMERA_MOVEMENT_OPTIONS, FOCAL_OPTIONS, STATUS_OPTIONS } from '../types'
 import { formatDuration, formatLabel } from '../utils'
 
 const SceneTable = ({
@@ -56,6 +56,7 @@ const SceneTable = ({
               <th>Duree</th>
               <th>Focale</th>
               <th>Format</th>
+              <th>Cam</th>
               <th>Image</th>
               <th>Audio</th>
               <th>Statut</th>
@@ -67,6 +68,9 @@ const SceneTable = ({
               const formatLabelText = scene.useProjectFormat
                 ? `Projet ${formatLabel(project.projectFrameFormat)}`
                 : `Override ${formatLabel(scene.sceneFrameFormat)}`
+              const cameraLabel =
+                CAMERA_MOVEMENT_OPTIONS.find((option) => option.value === scene.cameraMovement)
+                  ?.label || 'Fixe'
               return (
                 <tr
                   key={scene.id}
@@ -115,6 +119,9 @@ const SceneTable = ({
                   </td>
                   <td>
                     <span className="pill">{formatLabelText}</span>
+                  </td>
+                  <td>
+                    <span className="tag muted">Cam: {cameraLabel}</span>
                   </td>
                   <td className="cell-image">
                     {scene.image ? (
