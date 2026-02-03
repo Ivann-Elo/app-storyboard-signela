@@ -1026,12 +1026,12 @@ function App() {
     <div className="app-root">
       <div className="editor-shell">
         <header className="editor-header">
-          <div>
+          <div className="editor-brand">
             <div className="brand brand--logo">
               <img className="brand-logo" src="/LOGO-BLANC.png" alt="Signela" />
             </div>
             <button
-              className="btn btn-ghost"
+              className="btn btn-ghost btn-back"
               onClick={() => {
                 setActiveProjectId(null)
                 closeSceneModal()
@@ -1058,19 +1058,16 @@ function App() {
               <span className="pill">
                 {activeProject.gridMode === 'stable' ? 'Grille stable' : 'Cards adaptatives'}
               </span>
-              <span className="pill">{activeProject.scenes.length} scenes</span>
+              <span className="pill">{activeProject.scenes.length}  scènes</span>
               <span className="pill">Total {formatDuration(totalDuration)}</span>
+              {focalDistribution.map((entry) => (
+                <span className="pill" key={entry.label}>
+                  {entry.label}
+                </span>
+              ))}
             </div>
             <div className="stats-row">
-              {focalDistribution.length > 0 ? (
-                <p>
-                  {focalDistribution
-                    .map((entry) => `${entry.label} ${entry.count}`)
-                    .join('  ')}
-                </p>
-              ) : (
-                <p>Aucune scène pour l'instant.</p>
-              )}
+              {focalDistribution.length === 0 ? <p>Aucune scène pour l'instant.</p> : null}
             </div>
           </div>
           <div className="header-actions">
