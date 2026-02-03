@@ -916,7 +916,6 @@ function App() {
               <div className="brand brand--logo">
                 <img className="brand-logo" src="/signela-logo.png" alt="Signela" />
               </div>
-              <p className="subtitle">Storyboard pro pour equipes creatives.</p>
             </div>
             <div className="header-actions">
               {auth.user ? (
@@ -924,7 +923,7 @@ function App() {
                   <span className="pill">Connecte: {auth.user.email}</span>
                   <button className="btn btn-ghost" onClick={handleLogout}>
                     <Icon name="close" />
-                    Deconnexion
+                    Déconnexion
                   </button>
                   <button className="btn btn-primary" onClick={openCreateModal}>
                     <Icon name="plus" />
@@ -942,8 +941,8 @@ function App() {
 
           {!auth.token ? (
             <div className="empty-state auth-gate">
-              <h2>Connectez-vous pour acceder a vos projets.</h2>
-              <p>La synchronisation cloud est activee apres connexion.</p>
+              <h2>Connectez-vous pour accéder à vos projets.</h2>
+              <p>La synchronisation cloud est activée après connexion.</p>
               <button className="btn btn-primary" onClick={openAuthModal}>
                 <Icon name="settings" />
                 Se connecter
@@ -954,10 +953,10 @@ function App() {
               {projects.length === 0 ? (
                 <div className="empty-state">
                   <h2>Aucun projet pour le moment.</h2>
-                  <p>Créez votre premier projet video et commencez le storyboard.</p>
+                  <p>Créez votre premier projet videéo et commencez le storyboard.</p>
                   <button className="btn btn-primary" onClick={openCreateModal}>
                     <Icon name="plus" />
-                    Creer un projet
+                    Créer un projet
                   </button>
                 </div>
               ) : (
@@ -1070,7 +1069,7 @@ function App() {
                     .join('  ')}
                 </p>
               ) : (
-                <p>Aucune scene pour l instant.</p>
+                <p>Aucune scène pour l'instant.</p>
               )}
             </div>
           </div>
@@ -1081,7 +1080,7 @@ function App() {
                 onClick={() => setViewMode('cards')}
               >
                 <Icon name="grid" />
-                Vue Scene
+                Vue Scène
               </button>
               <button
                 className={viewMode === 'list' ? 'active' : ''}
@@ -1093,11 +1092,11 @@ function App() {
             </div>
             <button className="btn btn-primary" onClick={handleAddScene}>
               <Icon name="plus" />
-              Nouvelle scene
+              Nouvelle scène
             </button>
             <button className="btn btn-ghost" onClick={() => openEditModal(activeProject)}>
               <Icon name="settings" />
-              Parametres projet
+              Paramètres projet
             </button>
             <span className="muted">{formattedSavedAt}</span>
             {auth.token && (
@@ -1199,7 +1198,7 @@ function App() {
 
         {isListView && hasSelection && (
           <div className="bulk-bar">
-            <span>{selectedSceneIds.length} selectionnee(s)</span>
+            <span>{selectedSceneIds.length} sélèctionnée(s)</span>
             <div>
               <button className="btn btn-ghost" onClick={handleDuplicateSelected}>
                 <Icon name="copy" />

@@ -158,20 +158,21 @@ textarea {
 
 .brand-logo {
   display: block;
-  height: 36px;
+  height: clamp(28px, 3vw, 40px);
   width: auto;
-  max-width: 260px;
+  max-width: min(300px, 60vw);
+  object-fit: contain;
   filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
 }
 
 .projects-header .brand-logo {
-  height: 40px;
-  max-width: 320px;
+  height: clamp(32px, 4vw, 48px);
+  max-width: min(360px, 70vw);
 }
 
 .editor-header .brand-logo {
-  height: 32px;
-  max-width: 220px;
+  height: clamp(26px, 2.4vw, 36px);
+  max-width: min(240px, 40vw);
 }
 
 .subtitle {
