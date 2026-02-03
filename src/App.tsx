@@ -913,7 +913,9 @@ function App() {
         <div className="app-shell">
           <header className="projects-header">
             <div>
-              <p className="brand">Signela</p>
+              <div className="brand brand--logo">
+                <img className="brand-logo" src="/signela-logo.png" alt="Signela" />
+              </div>
               <p className="subtitle">Storyboard pro pour equipes creatives.</p>
             </div>
             <div className="header-actions">
@@ -1026,7 +1028,9 @@ function App() {
       <div className="editor-shell">
         <header className="editor-header">
           <div>
-            <p className="brand">Signela</p>
+            <div className="brand brand--logo">
+              <img className="brand-logo" src="/signela-logo.png" alt="Signela" />
+            </div>
             <button
               className="btn btn-ghost"
               onClick={() => {

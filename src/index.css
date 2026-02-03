@@ -148,6 +148,32 @@ textarea {
   box-shadow: 0 0 18px var(--accent-glow);
 }
 
+.brand--logo {
+  gap: 0;
+}
+
+.brand--logo::after {
+  display: none;
+}
+
+.brand-logo {
+  display: block;
+  height: 36px;
+  width: auto;
+  max-width: 260px;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
+}
+
+.projects-header .brand-logo {
+  height: 40px;
+  max-width: 320px;
+}
+
+.editor-header .brand-logo {
+  height: 32px;
+  max-width: 220px;
+}
+
 .subtitle {
   color: var(--muted);
   margin-top: 8px;
@@ -383,8 +409,9 @@ textarea {
 
 .project-header-main {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
 }
 
 .project-title {
@@ -396,6 +423,8 @@ textarea {
   background: transparent;
   color: var(--ink);
   text-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  flex: 1 1 260px;
+  min-width: 220px;
 }
 
 .project-title:focus {
@@ -406,11 +435,13 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  margin-left: auto;
 }
 
 .stats-row {
   font-size: 13px;
   color: var(--muted);
+  flex: 1 0 100%;
 }
 
 .header-actions {
@@ -440,6 +471,7 @@ textarea {
     overflow-x: auto;
     padding-bottom: 6px;
     -webkit-overflow-scrolling: touch;
+    margin-left: 0;
   }
 
   .meta-row .pill {
