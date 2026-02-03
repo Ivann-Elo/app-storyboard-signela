@@ -914,7 +914,7 @@ function App() {
           <header className="projects-header">
             <div>
               <div className="brand brand--logo">
-                <img className="brand-logo" src="/signela-logo.png" alt="Signela" />
+                <img className="brand-logo" src="/LOGO-BLANC.png" alt="Signela" />
               </div>
             </div>
             <div className="header-actions">
@@ -1028,7 +1028,7 @@ function App() {
         <header className="editor-header">
           <div>
             <div className="brand brand--logo">
-              <img className="brand-logo" src="/signela-logo.png" alt="Signela" />
+              <img className="brand-logo" src="/LOGO-BLANC.png" alt="Signela" />
             </div>
             <button
               className="btn btn-ghost"
