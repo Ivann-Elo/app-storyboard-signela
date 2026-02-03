@@ -312,6 +312,7 @@ function App() {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle')
   const syncTimerRef = useRef<number | null>(null)
   const hasLoadedRemoteRef = useRef(false)
+  const skipNextSyncRef = useRef(false)
   const canvasRef = useRef<HTMLDivElement | null>(null)
   const dragOverIdRef = useRef<string | null>(null)
   const pointerDragRef = useRef<{
@@ -396,6 +397,7 @@ function App() {
             setProjects([])
           }
         } else {
+          skipNextSyncRef.current = true
           setProjects(normalizeProjects(data))
         }
         const storedActive = loadActiveProjectId(userId)
@@ -425,6 +427,11 @@ function App() {
 
   useEffect(() => {
     if (!auth.token || !hasLoadedRemoteRef.current) return
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false
+      setSyncStatus('idle')
+      return
+    }
     if (syncTimerRef.current) {
       window.clearTimeout(syncTimerRef.current)
     }
@@ -837,8 +844,15 @@ function App() {
 
   const handleAuthSuccess = (token: string, user: AuthUser) => {
     setAuth({ token, user, status: 'ready' })
-    setProjects([])
-    setActiveProjectId(null)
+    const localProjects = loadProjects(user.id)
+    const storedActive = loadActiveProjectId(user.id)
+    const nextActive =
+      storedActive && localProjects.some((project) => project.id === storedActive)
+        ? storedActive
+        : null
+    setProjects(localProjects)
+    setActiveProjectId(nextActive)
+    hasLoadedRemoteRef.current = false
     setAuthModalOpen(false)
   }
 

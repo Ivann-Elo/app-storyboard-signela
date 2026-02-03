@@ -217,10 +217,14 @@ app.get('/api/projects', requireAuth, async (req, res) => {
       'select * from projects where user_id = $1 order by created_at asc',
       [req.user.sub]
     )
-    const projectIds = projects.rows.map((row) => row.id)
-    const scenes = projectIds.length
-      ? await pool.query('select * from scenes where project_id = any($1)', [projectIds])
-      : { rows: [] }
+    const scenes = await pool.query(
+      `select scenes.*
+       from scenes
+       join projects on scenes.project_id = projects.id
+       where projects.user_id = $1
+       order by scenes.project_id asc, scenes.order_index asc`,
+      [req.user.sub]
+    )
     const scenesByProject = scenes.rows.reduce((acc, row) => {
       acc[row.project_id] = acc[row.project_id] || []
       acc[row.project_id].push(row)
